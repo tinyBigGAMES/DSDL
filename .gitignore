@@ -84,3 +84,4 @@ modules/
 *.dsv
 DSDL.zip
 bin/Data.zip
+zip_latest_commit.cmd 
