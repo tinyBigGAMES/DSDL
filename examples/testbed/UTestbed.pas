@@ -206,7 +206,7 @@ var
   LTexture: PSDL_Texture;                    // Texture object for rendering an image.
   LFontX, LFontY: Single;                    // Coordinates for positioning text on the screen.
   LVersion: string;                          // String to store SDL version information.
-
+  tw,th: Single;
 begin
   // Initialize SDL and check for success.
   if not SDL_InitEx() then Exit;
