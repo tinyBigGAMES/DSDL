@@ -59,9 +59,75 @@
   - Initial release.
 
  ------------------------------------------------------------------------------
+
  DSDL Usage Notes
  ===================
+ 1. Standard Password-Protected ZIP Support
+    Overview:
+      Seamlessly integrate password-protected ZIP files into your SDL
+      applications through the SDL IOStream Interface. This extension enables
+      reading and streaming of data directly from encrypted ZIP archives
+      without needing to extract files first.
+    Benefits:
+      * Secure access to assets with password protection.
+      * Simplifies resource management by allowing compressed file usage in
+        real-time.
+      * Fully compatible with existing SDL IOStream workflows.
+    Use Case:
+     * Loading textures, audio files, or configuration data from encrypted
+       archives.
 
+ 2. MPEG-1 Video Playback with Real-Time Streaming
+    Overview:
+      * Enable MPEG-1 video playback directly within SDL-based applications.
+        This feature supports real-time streaming of video data from ZIP
+        archives, allowing seamless playback of video assets without
+        pre-extraction.
+    Key Features:
+      * Real-time video streaming from standard or password-protected ZIP
+        archives.
+      * Efficient decoding optimized for minimal resource usage.
+      * Smooth integration with SDL rendering systems for playback.
+    Use Case:
+      * Playing in-game cutscenes, intro videos, or animated overlays.
+      * Streaming video resources in resource-constrained environments.
+
+ 3. Frame-Rate Limiting and Timing Support
+    Overview:
+      * Add precise frame-rate control to your SDL applications with newly
+        introduced timing support. This allows developers to cap the frame
+        rate, ensuring consistent performance across various systems.
+
+    Features:
+      * Specify and enforce a maximum frame rate to reduce CPU/GPU usage.
+      * Improves stability by preventing frame rate spikes or slowdowns.
+      * Synchronizes game logic updates with render cycles for smoother
+        gameplay.
+    Use Case:
+      * Developing games or multimedia applications where a stable frame rate
+        is critical.
+      * Optimizing energy consumption for portable and battery-powered devices.
+
+ 4. Simplified SDL Utility Enhancements
+    Overview:
+     * Additional utility functions have been introduced to streamline common
+       SDL development tasks. These enhancements aim to make SDL simpler and
+       easier to use for developers of all skill levels.
+    Examples:
+      * Helper routines for managing window initialization, input handling, or
+        texture loading.
+      * Enhanced error reporting for faster debugging and troubleshooting.
+      * Improved resource management to reduce boilerplate code.
+    Benefits:
+      * Reduces code complexity, making SDL applications cleaner and more
+        maintainable.
+      * Faster development time with utility routines handling repetitive tasks.
+
+ Summary:
+   These extended SDL features provide developers with powerful tools for
+   handling secure archives, video playback, precise timing, and simplified SDL
+   integration. By leveraging these additions, developers can create more
+   efficient, secure, and polished applications.
 
 ==============================================================================}
 
@@ -91,12 +157,29 @@ interface
 
 {$REGION ' USES '}
 uses
+  System.Types,
   System.SysUtils,
   System.Classes,
   System.IOUtils,
   System.Math,
+  System.SyncObjs,
   WinApi.Windows;
 {$ENDREGION}  
+
+/// <summary>
+/// Defines the version information for the DSDL library.
+/// </summary>
+/// <remarks>
+/// This block includes the major, minor, and patch version numbers,
+/// which are combined to form the full version string.
+/// </remarks>
+const
+  DSDL_VERSION_MAJOR = '0'; // Major version number.
+  DSDL_VERSION_MINOR = '1'; // Minor version number.
+  DSDL_VERSION_PATCH = '0'; // Patch version number.
+  DSDL_VERSION_FULL  = DSDL_VERSION_MAJOR + '.' +
+                       DSDL_VERSION_MINOR + '.' +
+                       DSDL_VERSION_PATCH; // Full version string constructed from major, minor, and patch.
 
 {$REGION ' LIB API '}
 const
@@ -7900,12 +7983,137 @@ var
   _spUtil_readFile: function(const path: PUTF8Char; length: PInteger): PUTF8Char; cdecl;
 {$ENDREGION}  
 
+{$REGION ' EXT API '}
+//=== ZLIB ==================================================================
+function unzSeek(AFile: unzFile; AOffset: Int64; AOrigin: Integer; const APassword, AFilename: AnsiString): Int64;
+
+//=== SDL ===================================================================
+const
+  SDL_INIT_EVERYTHING = SDL_INIT_AUDIO or SDL_INIT_VIDEO or
+    SDL_INIT_JOYSTICK or SDL_INIT_HAPTIC or SDL_INIT_GAMEPAD or
+    SDL_INIT_EVENTS or SDL_INIT_SENSOR or SDL_INIT_CAMERA;
+
+const
+  // SDL Window Flags (64-bit)
+  SDL_WINDOW_FULLSCREEN           = $0000000000000001;  // window is in fullscreen mode
+  SDL_WINDOW_OPENGL               = $0000000000000002;  // window usable with OpenGL context
+  SDL_WINDOW_OCCLUDED             = $0000000000000004;  // window is occluded
+  SDL_WINDOW_HIDDEN               = $0000000000000008;  // window is neither mapped onto the desktop nor shown in the taskbar/dock/window list; SDL_ShowWindow() is required for it to become visible
+  SDL_WINDOW_BORDERLESS           = $0000000000000010;  // no window decoration
+  SDL_WINDOW_RESIZABLE            = $0000000000000020;  // window can be resized
+  SDL_WINDOW_MINIMIZED            = $0000000000000040;  // window is minimized
+  SDL_WINDOW_MAXIMIZED            = $0000000000000080;  // window is maximized
+  SDL_WINDOW_MOUSE_GRABBED        = $0000000000000100;  // window has grabbed mouse input
+  SDL_WINDOW_INPUT_FOCUS          = $0000000000000200;  // window has input focus
+  SDL_WINDOW_MOUSE_FOCUS          = $0000000000000400;  // window has mouse focus
+  SDL_WINDOW_EXTERNAL             = $0000000000000800;  // window not created by SDL
+  SDL_WINDOW_MODAL                = $0000000000001000;  // window is modal
+  SDL_WINDOW_HIGH_PIXEL_DENSITY   = $0000000000002000;  // window uses high pixel density back buffer if possible
+  SDL_WINDOW_MOUSE_CAPTURE        = $0000000000004000;  // window has mouse captured (unrelated to MOUSE_GRABBED)
+  SDL_WINDOW_MOUSE_RELATIVE_MODE  = $0000000000008000;  // window has relative mode enabled
+  SDL_WINDOW_ALWAYS_ON_TOP        = $0000000000010000;  // window should always be above others
+  SDL_WINDOW_UTILITY              = $0000000000020000;  // window should be treated as a utility window, not showing in the task bar and window list
+  SDL_WINDOW_TOOLTIP              = $0000000000040000;  // window should be treated as a tooltip and does not get mouse or keyboard focus, requires a parent window
+  SDL_WINDOW_POPUP_MENU           = $0000000000080000;  // window should be treated as a popup menu, requires a parent window
+  SDL_WINDOW_KEYBOARD_GRABBED     = $0000000000100000;  // window has grabbed keyboard input
+  SDL_WINDOW_VULKAN               = $0000000010000000;  // window usable for Vulkan surface
+  SDL_WINDOW_METAL                = $0000000020000000;  // window usable for Metal view
+  SDL_WINDOW_TRANSPARENT          = $0000000040000000;  // window with transparent buffer
+  SDL_WINDOW_NOT_FOCUSABLE        = $0000000080000000;  // window should not be focusable
+
+{ STARTUP }
+function  SDL_InitEx(): Boolean;
+procedure SDL_QuitEx();
+procedure SDL_GetVersionEx(AMajor: PInteger; AMinor: PInteger; AMicro: Pointer; AVersion: PString);
+
+{ WINDOW }
+function  SDL_IsWindowFullscreen(const AWindow: PSDL_Window): Boolean;
+procedure SDL_ToggleWindowFullscreen(const AWindow: PSDL_Window);
+
+{ IO }
+procedure SDL_INIT_INTERFACE(AInterface: PSDL_IOStreamInterface);
+
+{ RENERER }
+procedure SDL_ScaleToPresentationCoordinates(const ARenderer: PSDL_Renderer; var X, Y: Single);
+procedure SDL_ScaleToLogicalCoordinates(const ARenderer: PSDL_Renderer; var X, Y: Single);
+
+{ TIMING }
+procedure SDL_SetTargetFramerate(const ASpeed: Single=60.0);
+function  SDL_GetTargetFramerate(): Single;
+function  SDL_GetFramerateDuration(): Single;
+function  SDL_GetFrameRate(): Cardinal;
+function  SDL_GetDeltaTime(): Single;
+procedure SDL_ResetTiming();
+procedure SDL_UpdateTiming();
+
+{ ZIPFILE }
+const
+  SDL_ZIPFILE_DEFAULT_PASSWORD = 'Ymrx#(>y/@=[f<K+Jw.Xv32z9L-}ZuV&;p8kDU]%q:`gTsFEtC';
+
+type
+  SDL_ZipFileBuildProgressEvent = procedure(const ASender: Pointer; const AFilename: string; const AProgress: Integer; const ANewFile: Boolean);
+
+function  SDL_IOFromZipFile(const AZipFilename, AFilename: string; const AZipPassword: string=SDL_ZIPFILE_DEFAULT_PASSWORD): PSDL_IOStream;
+function  SDL_BuildZipFile(const AArchive, ADirectory: string; const ASender: Pointer=nil; const AHandler: SDL_ZipFileBuildProgressEvent=nil; const APassword: string=SDL_ZIPFILE_DEFAULT_PASSWORD): Boolean;
+
+{ VIDEO }
+type
+  SDL_VideoStatus = (vsStopped=0, vsPlaying=1, vsPaused=2);
+  SDL_VideoStatusEvent = procedure(const ASender: Pointer; const AStatus: SDL_VideoStatus; const AFilename: string);
+
+function  SDL_LoadVideo_IO(const ARenderer: PSDL_Renderer; var ARWops: PSDL_IOStream; const AFilename: string; const ASender: Pointer=nil; const ACallback: SDL_VideoStatusEvent=nil): Boolean;
+procedure SDL_UnloadVideo();
+procedure SDL_PlayVideo(const AVolume: Single; const ALoop: Integer);
+procedure SDL_LoadPlayVideo_IO(const ARenderer: PSDL_Renderer; var ARWops: PSDL_IOStream; const AFilename: string; const AVolume: Single; const ALoop: Integer; const ASender: Pointer=nil; const ACallback: SDL_VideoStatusEvent=nil);
+function  SDL_LoadPlayVideoFromZipFile(const ARenderer: PSDL_Renderer; const AZipFilename, AFilename: string; const AVolume: Single; const ALoop: Integer; const ASender: Pointer=nil; const ACallback: SDL_VideoStatusEvent=nil; const AZipFilePassword: string=SDL_ZIPFILE_DEFAULT_PASSWORD): Boolean;
+procedure SDL_PauseVideo(const APause: Boolean);
+procedure SDL_StopVideo();
+procedure SDL_RewindVideo();
+function  SDL_GetVideoStatus(): SDL_VideoStatus;
+procedure SDL_UpdateVideo(const ADeltaTime: Double);
+procedure SDL_RenderVideo(const ARenderer: PSDL_Renderer; const X, Y, AScale: Single);
+function  SDL_GetVideoWidth(): Cardinal;
+function  SDL_GetVideoHeight(): Cardinal;
+function  SDL_GetVideoFrameRate(): Single;
+function  SDL_GetVideoVolume(): Single;
+procedure SDL_SetVideoVolume(const AVolume: Single);
+
+{ MISC }
+function SDL_FormatAsUTF8(const AText: string; const AArgs: array of const; const AUseArgs: Boolean=True; const ARemoveBOM: Boolean=False): Pointer;
+
+{$ENDREGION}
+
 implementation
 
 {$REGION ' COMMON '}
 
+const
+  CTempStaticBufferSize = 4096;
+
 var
+  CriticalSection: TCriticalSection;
   Marshaller: TMarshaller;
+  TempStaticBuffer: array[0..CTempStaticBufferSize - 1] of Byte;
+
+function  GetTempStaticBuffer(): PByte;
+begin
+  Result := @TempStaticBuffer[0];
+end;
+
+function  GetTempStaticBufferSize(): Integer;
+begin
+  Result := CTempStaticBufferSize;
+end;
+
+procedure EnterCriticalSection();
+begin
+  CriticalSection.Enter;
+end;
+
+procedure LeaveCriticalSection();
+begin
+  CriticalSection.Leave;
+end;
 
 function EnableVirtualTerminalProcessing(): DWORD;
 var
@@ -8081,7 +8289,7 @@ begin
   Result := Copy(ABytes, LStartIndex, Length(ABytes) - LStartIndex);
 end;
 
-function AsUTF8(const AText: string; const ARemoveBOM: Boolean=False): Pointer;
+function SDL_FormatAsUTF8(const AText: string; const AArgs: array of const; const AUseArgs: Boolean; const ARemoveBOM: Boolean): Pointer;
 var
   LText: string;
 begin
@@ -8089,6 +8297,9 @@ begin
     LText := RemoveBOM(AText)
   else
     LText := AText;
+
+  if AUseArgs then
+    LText := Format(LText, AArgs);
   Result := Marshaller.AsUtf8(LText).ToPointer;
 end;
 
@@ -8474,6 +8685,881 @@ begin
   end;
 end;
 
+{$ENDREGION}
+
+{$REGION ' EXT API '}
+//=== ZLIB ==================================================================
+function unzSeek(AFile: unzFile; AOffset: Int64; AOrigin: Integer; const APassword, AFilename: AnsiString): Int64;
+var
+  LFileInfo: unz_file_info64;
+  LCurrentOffset, LBytesToRead: Int64;
+
+  procedure SeekToLoc;
+  begin
+    LBytesToRead := UInt64(AOffset) - unztell64(AFile);
+    while LBytesToRead > 0 do
+    begin
+      if LBytesToRead > GetTempStaticBufferSize() then
+        begin
+          EnterCriticalSection();
+          unzReadCurrentFile(AFile, GetTempStaticBuffer(), GetTempStaticBufferSize());
+          LeaveCriticalSection();
+        end
+      else
+        begin
+          EnterCriticalSection();
+          unzReadCurrentFile(AFile, GetTempStaticBuffer(), LBytesToRead);
+          LeaveCriticalSection();
+        end;
+
+      LBytesToRead := UInt64(AOffset) - unztell64(AFile);
+    end;
+  end;
+
+begin
+  if (AFile = nil) or (unzGetCurrentFileInfo64(AFile, @LFileInfo, nil, 0, nil, 0, nil, 0) <> UNZ_OK) then
+  begin
+    Result := UNZ_PARAMERROR;
+    Exit;
+  end;
+
+  LCurrentOffset := unztell64(AFile);
+  if LCurrentOffset = -1 then
+  begin
+    Result := UNZ_ERRNO;
+    Exit;
+  end;
+
+  case AOrigin of
+    SDL_IO_SEEK_SET: ;
+    SDL_IO_SEEK_CUR: Inc(AOffset, LCurrentOffset);
+    SDL_IO_SEEK_END: Inc(AOffset, LFileInfo.uncompressed_size);
+  else
+    Result := UNZ_PARAMERROR;
+    Exit;
+  end;
+
+  if AOffset < 0 then
+    Result := UNZ_PARAMERROR
+  else if AOffset = LCurrentOffset then
+    Result := UNZ_OK
+  else if AOffset > LCurrentOffset then
+    begin
+      SeekToLoc;
+      Result := UNZ_OK;
+    end
+  else
+    begin
+      if unzCloseCurrentFile(AFile) <> UNZ_OK then
+      begin
+        Result := UNZ_ERRNO;
+        Exit;
+      end;
+      if unzLocateFile(AFile, PAnsiChar(AFilename), 0)  <> UNZ_OK then
+      begin
+        Result := UNZ_END_OF_LIST_OF_FILE;
+        Exit;
+      end;
+      if unzOpenCurrentFilePassword(AFile, PAnsiChar(APassword)) <> UNZ_OK then
+      begin
+        Result := UNZ_ERRNO;
+        Exit;
+      end;
+      SeekToLoc;
+      Result := UNZ_OK;
+  end;
+
+  if Result = UNZ_OK then
+  begin
+    Result := unztell64(AFile);
+  end;
+end;
+
+//=== SDL ===================================================================
+type
+  PUnzipData = ^TUnzipData;
+  TUnzipData = record
+    Handle: unzFile;
+    Filename: AnsiString;
+    Password: AnsiString;
+    Position: Int64;
+  end;
+
+{ STARTUP }
+function  SDL_InitEx(): Boolean;
+var
+  LAudioSpec: SDL_AudioSpec;
+begin
+  Result := False;
+
+  if not SDL_Init(SDL_INIT_EVERYTHING) then Exit;
+  if not TTF_Init() then Exit;
+
+
+  Mix_Init(MIX_INIT_OGG);
+
+  LAudioSpec.freq := MIX_DEFAULT_FREQUENCY;
+  LAudioSpec.format := MIX_DEFAULT_FORMAT;
+  LAudioSpec.channels := MIX_DEFAULT_CHANNELS;
+
+  if not Mix_OpenAudio(0, @LAudioSpec) then Exit;
+
+  Result := True;
+end;
+
+procedure SDL_QuitEx();
+begin
+  Mix_CloseAudio();
+  Mix_Quit();
+  TTF_Quit();
+  SDL_Quit();
+end;
+
+procedure SDL_GetVersionEx(AMajor: PInteger; AMinor: PInteger; AMicro: Pointer; AVersion: PString);
+var
+  LVersionNum: UInt32;
+  LMajor, LMinor, LMicro: Integer;
+  LVersionStr: string;
+begin
+  // Get the SDL version as an integer
+  LVersionNum := SDL_GetVersion();
+
+  // Calculate major, minor, and micro versions based on the defined macros
+  LMajor := LVersionNum div 1000000;
+  LMinor := (LVersionNum div 1000) mod 1000;
+  LMicro := LVersionNum mod 1000;
+
+  // Format the version string
+  LVersionStr := Format('%d.%d.%d', [LMajor, LMinor, LMicro]);
+
+
+  if Assigned(AMajor) then
+    AMajor^ := LMajor;
+
+  if Assigned(AMinor) then
+    AMinor^ := LMinor;
+
+  if Assigned(AVersion) then
+    AVersion^ := LVersionStr;
+end;
+
+{ WINDOW }
+function SDL_IsWindowFullscreen(const AWindow: PSDL_Window): Boolean;
+begin
+  Result := (SDL_GetWindowFlags(AWindow) and SDL_WINDOW_FULLSCREEN) <> 0;
+end;
+
+procedure SDL_ToggleWindowFullscreen(const AWindow: PSDL_Window);
+begin
+  if SDL_IsWindowFullscreen(AWindow) then
+    SDL_SetWindowFullscreen(AWindow, False)  // Disable fullscreen
+  else
+    SDL_SetWindowFullscreen(AWindow, True);  // Enable fullscreen
+end;
+
+{ IO }
+procedure SDL_INIT_INTERFACE(AInterface: PSDL_IOStreamInterface);
+begin
+  AInterface^ := Default(SDL_IOStreamInterface);
+  AInterface^.version := SizeOf(AInterface^); // Set the version to the size of the interface
+end;
+
+procedure SDL_ScaleToPresentationCoordinates(const ARenderer: PSDL_Renderer; var X, Y: Single);
+var
+  LScaleX, LScaleY, LScale: Single;
+  LRect: SDL_FRect;
+  ALogicalWidth: Integer;
+  ALogicalHeight: Integer;
+
+begin
+  SDL_GetRenderLogicalPresentationRect(ARenderer, @LRect);
+  SDL_GetRenderLogicalPresentation(ARenderer, @ALogicalWidth, @ALogicalHeight, nil);
+
+  // Calculate the scale factors
+  LScaleX := LRect.w / ALogicalWidth;
+  LScaleY := LRect.h / ALogicalHeight;
+  LScale := Min(LScaleX, LScaleY);
+
+  // Adjust the x, y coordinates
+  X := X * LScale;
+  Y := Y * LScale;
+end;
+
+procedure SDL_ScaleToLogicalCoordinates(const ARenderer: PSDL_Renderer; var X, Y: Single);
+var
+  LScaleX, LScaleY, LScale: Single;
+  LRect: SDL_FRect;
+  ALogicalWidth, ALogicalHeight: Integer;
+begin
+  SDL_GetRenderLogicalPresentationRect(ARenderer, @LRect);
+  SDL_GetRenderLogicalPresentation(ARenderer, @ALogicalWidth, @ALogicalHeight, nil);
+
+  // Calculate the scale factors
+  LScaleX := LRect.w / ALogicalWidth;
+  LScaleY := LRect.h / ALogicalHeight;
+  LScale := Min(LScaleX, LScaleY);
+
+  // Revert the x, y coordinates to logical dimensions
+  X := X / LScale;
+  Y := Y / LScale;
+end;
+
+{ TIMING }
+type
+  TSDLTiming = record
+    TARGET_FPS: single;
+    TARGET_FRAME_DURATION: Single;
+    LFrameTime, DelayTime: Double;
+    LLastTime, LCurrentTime, LFrameStartTime: UInt64;
+    LFrameCount: Integer;
+    LFPS: Integer;
+  end;
+
+var
+  SDLTiming: TSDLTiming;
+
+procedure SDL_SetTargetFramerate(const ASpeed: Single);
+begin
+  SDLTiming.TARGET_FPS := ASpeed;
+  SDLTiming.TARGET_FRAME_DURATION := 1.0 / SDLTiming.TARGET_FPS; // Frame duration in seconds (e.g., ~0.01667 for 60 FPS)
+  SDL_ResetTiming();
+end;
+
+function  SDL_GetTargetFramerate(): Single;
+begin
+  Result := SDLTiming.TARGET_FPS;
+end;
+
+function  SDL_GetFramerateDuration(): Single;
+begin
+  Result := SDLTiming.TARGET_FRAME_DURATION;
+end;
+
+function  SDL_GetFrameRate(): Cardinal;
+begin
+  Result := Round(SDLTiming.LFPS);
+end;
+
+procedure SDL_ResetTiming();
+begin
+  SDLTiming.LFrameCount := 0;
+  SDLTiming.LFPS := 0;
+  SDLTiming.LLastTime := SDL_GetPerformanceCounter;
+  SDLTiming.LFrameStartTime := SDL_GetPerformanceCounter;
+end;
+
+function  SDL_GetDeltaTime(): Single;
+begin
+  Result := SDLTiming.LFrameTime;
+end;
+
+procedure SDL_UpdateTiming();
+var
+  LElapsedTime: Double;
+begin
+  Inc(SDLTiming.LFrameCount);
+
+  SDLTiming.LCurrentTime := SDL_GetPerformanceCounter;
+  LElapsedTime := (SDLTiming.LCurrentTime - SDLTiming.LLastTime) / SDL_GetPerformanceFrequency();
+
+  if LElapsedTime >= 1.0 then
+  begin
+    SDLTiming.LFPS := Round(SDLTiming.LFrameCount / LElapsedTime);
+    SDLTiming.LLastTime := SDLTiming.LCurrentTime;
+    SDLTiming.LFrameCount := 0;
+  end;
+
+  // Calculate time taken for the current frame
+  SDLTiming.LFrameTime := (SDLTiming.LCurrentTime - SDLTiming.LFrameStartTime) / SDL_GetPerformanceFrequency();
+
+  // Calculate the remaining time needed to hit the target frame duration
+  SDLTiming.DelayTime := SDLTiming.TARGET_FRAME_DURATION - SDLTiming.LFrameTime;
+
+  // Delay only if we have remaining time and it's positive
+  if SDLTiming.DelayTime > 0 then
+    SDL_DelayPrecise(Round(SDLTiming.DelayTime * 1000000000)); // Convert seconds to nanoseconds
+
+  // Update frame start time for the next frame
+  SDLTiming.LFrameStartTime := SDL_GetPerformanceCounter();
+end;
+
+{ ZIPFILE }
+
+function ZipFileIOSize(AUserData: Pointer): Sint64; cdecl;
+var
+  LUnzipData: PUnzipData;
+  LFileInfo: unz_file_info64;
+begin
+  Result := -1;
+  if not Assigned(AUserData) then Exit;
+
+  LUnzipData := PUnzipData(AUserData);
+  if unzGetCurrentFileInfo64(LUnzipData^.Handle, @LFileInfo, nil, 0, nil, 0, nil, 0) = UNZ_OK then
+    Result := LFileInfo.uncompressed_size;
+end;
+
+function ZipFileIOSeek(AUserData: Pointer; AOffset: Sint64; whence: SDL_IOWhence): Sint64; cdecl;
+var
+  LUnzipData: PUnzipData;
+begin
+  Result := -1;
+  if not Assigned(AUserData) then Exit;
+
+  LUnzipData := PUnzipData(AUserData);
+  Result := unzSeek(LUnzipData.Handle, AOffset, whence, LUnzipData.Password,  LUnzipData.Filename);
+  if Result < 0 then
+    Result := -1
+  else
+    LUnzipData^.Position := Result;
+end;
+
+function ZipFileIORead(AUserData: Pointer; APtr: Pointer; ASize: NativeUInt; AStatus: PSDL_IOStatus): NativeUInt; cdecl;
+var
+  LUnzipData: PUnzipData;
+begin
+  Result := 0;
+  if not Assigned(AUserData) then
+  begin
+    AStatus^ := SDL_IO_STATUS_ERROR;
+    Exit;
+  end;
+
+  LUnzipData := PUnzipData(AUserData);
+  Result := unzReadCurrentFile(LUnzipData^.Handle, APtr, ASize);
+  if Result >= 0 then
+    begin
+      Inc(LUnzipData^.Position, Result);
+      Result := Result;
+      AStatus^ := SDL_IO_STATUS_READY;
+    end
+  else
+    AStatus^ := SDL_IO_STATUS_ERROR;
+end;
+
+function ZipFileIOClose(AUserData: Pointer): Boolean; cdecl;
+var
+  LUnzipData: PUnzipData;
+begin
+  Result := False;
+  if not Assigned(AUserData) then Exit;
+
+  LUnzipData := PUnzipData(AUserData);
+  unzClose(LUnzipData^.Handle);
+  Dispose(LUnzipData);
+  Result := True;
+end;
+
+function  SDL_IOFromZipFile(const AZipFilename, AFilename: string; const AZipPassword: string): PSDL_IOStream;
+var
+  LUnzipData: PUnzipData;
+  LZipFilename: string;
+  LFilename: string;
+  LIOStream: SDL_IOStreamInterface;
+begin
+  Result := nil;
+
+  LZipFilename := AZipFilename.Replace('/', '\');
+  if not TFile.Exists(LZipFilename) then Exit;
+
+  // try to open ZIP file
+  New(LUnzipData);
+  LUnzipData^.Handle := unzOpen64(SDL_FormatAsUTF8(LZipFilename, []));
+  LUnzipData^.Password := AnsiString(AZipPassword);
+  LUnzipData^.Position := 0;
+
+  if LUnzipData^.Handle = nil then
+  begin
+    Dispose(LUnzipData);
+    Exit(nil);
+  end;
+
+  // locate the file inside the ZIP
+  LFilename := AFilename.Replace('/', '\');
+  if unzLocateFile(LUnzipData^.Handle, SDL_FormatAsUTF8(LFilename, []), 0) <> UNZ_OK then
+  begin
+    unzClose(LUnzipData^.Handle);
+    Dispose(LUnzipData);
+    Exit(nil);
+  end;
+  LUnzipData.Filename := AnsiString(LFilename);
+
+  if unzOpenCurrentFilePassword(LUnzipData^.Handle, SDL_FormatAsUTF8(AZipPassword, [], False)) <> UNZ_OK then
+  begin
+    unzClose(LUnzipData^.Handle);
+    Dispose(LUnzipData);
+    Exit(nil);
+  end;
+
+  SDL_INIT_INTERFACE(@LIOStream);
+  LIOStream.size := ZipFileIOSize;
+  LIOStream.seek := ZipFileIOSeek;
+  LIOStream.read := ZipFileIORead;
+  LIOStream.close := ZipFileIOClose;
+
+  Result := SDL_OpenIO(@LIOStream, LUnzipData);
+end;
+
+(*
+procedure BuildZipFile_OnBuildProgress(const ASender: Pointer; const AFilename: string; const AProgress: Integer; const ANewFile: Boolean);
+begin
+  if aNewFile then PrintLn('');
+  Print(#13+'Adding %s(%d%s)...', [TPath.GetFileName(aFilename), aProgress, '%']);
+end;
+*)
+procedure BuildZipFile_OnBuildProgress(const ASender: Pointer; const AFilename: string; const AProgress: Integer; const ANewFile: Boolean);
+begin
+  if not HasConsoleOutput() then Exit;
+  if aNewFile then WriteLn;
+  Write(#13+Format('Adding %s(%d%s)...', [TPath.GetFileName(aFilename), aProgress, '%']));
+end;
+
+function SDL_BuildZipFile(const AArchive, ADirectory: string; const ASender: Pointer; const AHandler: SDL_ZipFileBuildProgressEvent; const APassword: string): Boolean;
+var
+  LFileList: TStringDynArray;
+  LArchive: PAnsiChar;
+  LFilename: string;
+  LFilename2: PAnsiChar;
+  LPassword: PAnsiChar;
+  LZipFile: zipFile;
+  LZipFileInfo: zip_fileinfo;
+  LFile: TStream;
+  LCrc: Cardinal;
+  LBytesRead: Integer;
+  LFileSize: Int64;
+  LProgress: Single;
+  LNewFile: Boolean;
+  LHandler: SDL_ZipFileBuildProgressEvent;
+  LSender: Pointer;
+
+  function GetCRC32(aStream: TStream): Cardinal;
+  var
+    LBytesRead: Integer;
+    LBuffer: array of Byte;
+  begin
+    Result := crc32(0, nil, 0);
+    repeat
+      LBytesRead := AStream.Read(GetTempStaticBuffer^, GetTempStaticBufferSize);
+      Result := crc32(Result, Pbytef(GetTempStaticBuffer), LBytesRead);
+    until LBytesRead = 0;
+
+    LBuffer := nil;
+  end;
+
+begin
+  Result := False;
+
+  // check if directory exists
+  if not TDirectory.Exists(ADirectory) then Exit;
+
+  // init variabls
+  FillChar(LZipFileInfo, SizeOf(LZipFileInfo), 0);
+
+  // scan folder and build file list
+  LFileList := TDirectory.GetFiles(ADirectory, '*',
+    TSearchOption.soAllDirectories);
+
+  LArchive := PAnsiChar(AnsiString(AArchive));
+  LPassword := PAnsiChar(AnsiString(APassword));
+
+  // create a zip file
+  LZipFile := zipOpen64(LArchive, APPEND_STATUS_CREATE);
+
+  // init handler
+  LHandler := AHandler;
+  LSender := ASender;
+
+  if not Assigned(LHandler) then
+    LHandler := BuildZipFile_OnBuildProgress;
+
+  // process zip file
+  if LZipFile <> nil then
+  begin
+    // loop through all files in list
+    for LFilename in LFileList do
+    begin
+      // open file
+      LFile := TFile.OpenRead(LFilename);
+
+      // get file size
+      LFileSize := LFile.Size;
+
+      // get file crc
+      LCrc := GetCRC32(LFile);
+
+      // open new file in zip
+      LFilename2 := PAnsiChar(AnsiString(LFilename));
+      if ZipOpenNewFileInZip3_64(LZipFile, LFilename2, @LZipFileInfo, nil, 0,
+        nil, 0, '',  Z_DEFLATED, 9, 0, 15, 9, Z_DEFAULT_STRATEGY,
+        LPassword, LCrc, 1) = Z_OK then
+      begin
+        // make sure we start at star of stream
+        LFile.Position := 0;
+
+        LNewFile := True;
+
+        // read through file
+        repeat
+          // read in a buffer length of file
+          LBytesRead := LFile.Read(GetTempStaticBuffer^, GetTempStaticBufferSize);
+
+          // write buffer out to zip file
+          zipWriteInFileInZip(LZipFile, GetTempStaticBuffer, LBytesRead);
+
+          // calc file progress percentage
+          LProgress := 100.0 * (LFile.Position / LFileSize);
+
+          // show progress
+          if Assigned(LHandler) then
+          begin
+            LHandler(LSender, LFilename, Round(LProgress), LNewFile);
+          end;
+
+          LNewFile := False;
+
+        until LBytesRead = 0;
+
+        // close file in zip
+        zipCloseFileInZip(LZipFile);
+
+        // free file stream
+        FreeAndNil(LFile);
+      end;
+    end;
+
+    // close zip file
+    zipClose(LZipFile, '');
+  end;
+
+  // return true if new zip file exits
+  Result := TFile.Exists(LFilename);
+end;
+
+
+{ VIDEO }
+const
+  VIDEO_SAMPLEBUFFERSIZE  = 2304;
+  BUFFER_DEFAULT_SIZE = 1024;
+
+type
+  { TSDLVideo }
+  PSDLVideo = ^TSDLVideo;
+  TSDLVideo = record
+    AudioDevice: SDL_AudioDeviceID;
+    AudioStream: PSDL_AudioStream;
+    AudioSampleRate: Integer;
+    IOStream: PSDL_IOStream;
+    PLM: Pplm_t;
+    StaticPlmBuffer: array[0..BUFFER_DEFAULT_SIZE] of byte;
+    Texture: PSDL_Texture;
+    Width: Cardinal;
+    Height: Cardinal;
+    FrameRate: Single;
+    Status: SDL_VideoStatus;
+    StopFlag: Boolean;
+    RewindFlag: Boolean;
+    Loop: Integer;
+    Filename: string;
+    Sender: Pointer;
+    Callback: SDL_VideoStatusEvent;
+  end;
+
+var
+  SDLVideo: TSDLVideo;
+
+procedure PLMDecodeVideo(APLM: pplm_t; AFrame: pplm_frame_t; AUserData: pointer); cdecl;
+var
+  LVideo: PSDLVideo;
+  LPixels: Pointer;
+  LPitch: Integer;
+begin
+  LVideo := AUserData;
+  if not Assigned(LVideo) then Exit;
+
+  SDL_LockTexture(LVideo.Texture, nil, @LPixels, @LPitch);
+  plm_frame_to_rgb(AFrame, LPixels, LPitch);
+  SDL_UnlockTexture(LVideo.Texture);
+end;
+
+procedure PLMDecodeAudio(APLM: pplm_t; ASamples: pplm_samples_t; AUserData: Pointer); cdecl;
+var
+  LVideo: PSDLVideo;
+  LSize: Cardinal;
+  //LGainB: Double;
+  //LFactor: Double;
+  //LCount: Integer;
+  //LPtr: PSingle;
+begin
+  LVideo := AUserData;
+  if not Assigned(LVideo) then Exit;
+
+  LSize := SizeOf(Single) * ASamples.count * 2;
+  SDL_PutAudioStreamData(LVideo.AudioStream, @ASamples.interleaved[0], LSize);
+end;
+
+procedure PLMLoadBuffer(ABuffer: pplm_buffer_t; AUserData: Pointer); cdecl;
+var
+  LVideo: PSDLVideo;
+  LBytesRead: NativeUInt;
+begin
+  LVideo := AUserData;
+  if not Assigned(LVideo) then Exit;
+  LVideo.RewindFlag := False;
+
+  LBytesRead := SDL_ReadIO(LVideo.IOStream, @LVideo.StaticPlmBuffer[0], BUFFER_DEFAULT_SIZE);
+  if LBytesRead > 0 then
+    plm_buffer_write(ABuffer, @LVideo.StaticPlmBuffer[0], BUFFER_DEFAULT_SIZE)
+  else
+    begin
+      if LVideo.Loop > 0 then
+        Dec(LVideo.Loop)
+      else
+        if LVideo.Loop = 0 then
+        begin
+          LVideo.Status := vsStopped;
+          LVideo.StopFlag := True;
+          Exit;
+        end;
+
+      if Assigned(LVideo.PLM) then
+      begin
+        if LVideo.AudioDevice <> 0 then
+          SDL_ClearAudioStream(LVideo.AudioStream);
+        LVideo.RewindFlag := True;
+      end;
+    end;
+end;
+
+procedure OnVideoStatus(const AStatus: SDL_VideoStatus; const AFilename: string);
+begin
+  if not Assigned(SDLVideo.Callback) then Exit;
+  SDLVideo.Callback(SDLVideo.Sender, AStatus, AFilename);
+end;
+
+function  SDL_LoadVideo_IO(const ARenderer: PSDL_Renderer; var ARWops: PSDL_IOStream; const AFileName: string; const ASender: Pointer; const ACallback: SDL_VideoStatusEvent): Boolean;
+var
+  LBuffer: pplm_buffer_t;
+  LInAudioSpec, LOutAudioSpec: SDL_AudioSpec;
+begin
+  Result := False;
+
+  SDL_UnloadVideo();
+
+  SDLVideo.IOStream := ARWops;
+  if SDLVideo.IOStream = nil then Exit;
+
+  LBuffer := plm_buffer_create_with_capacity(BUFFER_DEFAULT_SIZE);
+  plm_buffer_set_load_callback(LBuffer, PLMLoadBuffer, @SDLVideo);
+  SDLVideo.PLM := plm_create_with_buffer(LBuffer, 1);
+
+  plm_set_audio_enabled(SDLVideo.PLM, 1);
+  plm_set_audio_stream(SDLVideo.PLM, 0);
+  plm_set_loop(SDLVideo.PLM, 0);
+
+  SDLVideo.AudioSampleRate := plm_get_samplerate(SDLVideo.PLM);
+
+  LInAudioSpec.freq := SDLVideo.AudioSampleRate;
+  LInAudioSpec.format := SDL_AUDIO_F32;
+  LInAudioSpec.channels := MIX_DEFAULT_CHANNELS;
+
+  LOutAudioSpec.format := SDL_AUDIO_F32;
+  LOutAudioSpec.channels := MIX_DEFAULT_CHANNELS;
+  LOutAudioSpec.freq := MIX_DEFAULT_FREQUENCY;
+
+  SDLVideo.AudioDevice := SDL_OpenAudioDevice( SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, @LInAudioSpec);
+  SDLVideo.AudioStream := SDL_CreateAudioStream(@LInAudioSpec, @LOutAudioSpec);
+  SDL_BindAudioStream(SDLVideo.AudioDevice, SDLVideo.AudioStream);
+  SDL_ResumeAudioDevice(SDLVideo.AudioDevice);
+
+  plm_set_audio_lead_time(SDLVideo.PLM, (VIDEO_SAMPLEBUFFERSIZE*LInAudioSpec.channels)/SDLVideo.AudioSampleRate);
+
+  SDLVideo.Width := plm_get_width(SDLVideo.PLM);
+  SDLVideo.Height := plm_get_height(SDLVideo.PLM);
+
+  SDLVideo.Texture := SDL_CreateTexture(ARenderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, SDLVideo.Width, SDLVideo.Height);
+  if not Assigned(SDLVideo.Texture) then
+    begin
+    SDL_UnloadVideo();
+    Exit;
+  end;
+  SDL_SetTextureScaleMode(SDLVideo.Texture, SDL_SCALEMODE_NEAREST);
+
+  plm_set_video_decode_callback(SDLVideo.PLM, PLMDecodeVideo, @SDLVideo);
+  plm_set_audio_decode_callback(SDLVideo.PLM, PLMDecodeAudio, @SDLVideo);
+
+  SDLVideo.Status := vsStopped;
+  SDLVideo.Filename := AFilename;
+  SDLVideo.Sender := ASender;
+  SDLVideo.Callback := ACallback;
+
+  ARWops := nil;
+
+  Result := True;
+end;
+
+procedure SDL_UnloadVideo();
+begin
+  if SDLVideo.AudioDevice > 0 then
+  begin
+    SDL_ClearAudioStream(SDLVideo.AudioStream);
+    SDL_UnbindAudioStream(SDLVideo.AudioStream);
+    SDL_DestroyAudioStream(SDLVideo.AudioStream);
+    SDL_CloseAudioDevice(SDLVideo.AudioDevice);
+  end;
+  if Assigned(SDLVideo.PLM) then plm_destroy(SDLVideo.PLM);
+  if Assigned(SDLVideo.Texture) then SDL_DestroyTexture(SDLVideo.Texture);
+  if Assigned(SDLVideo.IOStream) then SDL_CloseIO(SDLVideo.IOStream);
+
+  SDLVideo.AudioDevice := 0;
+  SDLVideo.AudioSampleRate := 0;
+  SDLVideo.IOStream := nil;
+  SDLVideo.PLM := nil;
+  FillChar(SDLVideo.StaticPlmBuffer, SizeOf(SDLVideo.StaticPlmBuffer), 0);
+  SDLVideo.Texture := nil;
+  SDLVideo.Width := 0;
+  SDLVideo.Height := 0;
+  SDLVideo.FrameRate := 0;
+  SDLVideo.Status := vsStopped;
+  SDLVideo.StopFlag := False;
+  SDLVideo.Loop := 0;
+  SDLVideo.AudioStream := nil;
+  SDLVideo.Filename := '';
+  SDLVideo.Sender := nil;
+  SDLVideo.Callback := nil;
+end;
+
+procedure SDL_PlayVideo(const AVolume: Single; const ALoop: Integer);
+begin
+  if not Assigned(SDLVideo.IOStream) then Exit;
+
+  SDL_SetVideoVolume(AVolume);
+  SDLVideo.Loop := ALoop;
+  SDLVideo.Status := vsPlaying;
+  OnVideoStatus(SDLVideo.Status, SDLVideo.Filename);
+end;
+
+procedure SDL_LoadPlayVideo_IO(const ARenderer: PSDL_Renderer; var ARWops: PSDL_IOStream;  const AFilename: string; const AVolume: Single; const ALoop: Integer; const ASender: Pointer; const ACallback: SDL_VideoStatusEvent);
+begin
+  if SDL_LoadVideo_IO(ARenderer, ARWops, AFilename, ASender, ACallback) then
+  begin
+    SDL_PlayVideo(AVolume, ALoop);
+  end;
+end;
+
+function SDL_LoadPlayVideoFromZipFile(const ARenderer: PSDL_Renderer; const AZipFilename, AFilename: string; const AVolume: Single; const ALoop: Integer; const ASender: Pointer; const ACallback: SDL_VideoStatusEvent; const AZipFilePassword: string): Boolean;
+var
+  LRWops: PSDL_IOStream;
+begin
+  Result := False;
+  LRWops := SDL_IOFromZipFile(AZipFilename, AFilename, AZipFilePassword);
+  if not Assigned(LRWops) then Exit;
+  if SDL_LoadVideo_IO(ARenderer, LRWops, AFilename, ASender, ACallback) then
+  begin
+    SDL_PlayVideo(AVolume, ALoop);
+    Result := True
+  end;
+end;
+
+procedure SDL_PauseVideo(const APause: Boolean);
+begin
+  if SDLVideo.Filename.IsEmpty then Exit;
+  if APause then
+    SDLVideo.Status := vsPaused
+  else
+    SDLVideo.Status := vsPlaying;
+  OnVideoStatus(SDLVideo.Status, SDLVideo.Filename);
+end;
+
+procedure SDL_StopVideo();
+begin
+  if SDLVideo.Filename.IsEmpty then Exit;
+  SDL_RewindVideo();
+  SDLVideo.Status := vsStopped;
+  OnVideoStatus(SDLVideo.Status, SDLVideo.Filename);
+end;
+
+procedure SDL_RewindVideo();
+begin
+  if SDLVideo.Filename.IsEmpty then Exit;
+
+  if not Assigned(SDLVideo.PLM) then Exit;
+  if not Assigned(SDLVideo.IOStream) then Exit;
+
+  plm_rewind(SDLVideo.PLM);
+  SDL_SeekIO(SDLVideo.IOStream, 0, SDL_IO_SEEK_SET);
+  SDL_ClearAudioStream(SDLVideo.AudioStream);
+end;
+
+function  SDL_GetVideoStatus(): SDL_VideoStatus;
+begin
+  Result := SDLVideo.Status;
+end;
+
+procedure SDL_UpdateVideo(const ADeltaTime: Double);
+begin
+  // check if video has stopped
+  if SDLVideo.StopFlag then
+  begin
+    SDLVideo.StopFlag := False;
+    OnVideoStatus(SDLVideo.Status, SDLVideo.Filename);
+    Exit;
+  end;
+
+  // check status
+  if SDLVideo.Status <> vsPlaying then Exit;
+  if not Assigned(SDLVideo.PLM) then Exit;
+
+  // check if we need to rewind RWops
+  if SDLVideo.RewindFlag then
+  begin
+    plm_rewind(SDLVideo.PLM);
+    SDL_SeekIO(SDLVideo.IOStream, 0, SDL_IO_SEEK_SET);
+  end;
+
+  // decode next video frame
+  plm_decode(SDLVideo.PLM, ADeltaTime);
+end;
+
+procedure SDL_RenderVideo(const ARenderer: PSDL_Renderer; const X, Y, AScale: Single);
+var
+  LRect: SDL_FRect;
+begin
+  if not Assigned(SDLVideo.Texture) then Exit;
+  if SDLVideo.Status <> vsPlaying then Exit;
+
+  LRect.X := X;
+  LRect.Y := Y;
+  LRect.w := (SDLVideo.Width-0) *  AScale;
+  LRect.h := (SDLVideo.Height-0) * AScale;
+
+  SDL_RenderTexture(ARenderer, SDLVideo.Texture, nil, @LRect);
+end;
+
+function  SDL_GetVideoWidth(): Cardinal;
+begin
+  Result := SDLVideo.Width;
+end;
+
+function  SDL_GetVideoHeight(): Cardinal;
+begin
+  Result := SDLVideo.Height;
+end;
+
+function  SDL_GetVideoFrameRate(): Single;
+begin
+  Result := SDLVideo.FrameRate;
+end;
+
+function  SDL_GetVideoVolume(): Single;
+begin
+  //Result := SDLVideo.Volume;
+  Result := SDL_GetAudioDeviceGain(SDLVideo.AudioDevice);
+end;
+
+procedure SDL_SetVideoVolume(const AVolume: Single);
+begin
+  //SDLVideo.Volume := AVolume;
+  SDL_SetAudioDeviceGain(SDLVideo.AudioDevice, AVolume);
+end;
 {$ENDREGION}
 
 {$REGION ' GET EXPORTS '}
@@ -10642,6 +11728,7 @@ var
   LError: string;
 begin
   ReportMemoryLeaksOnShutdown := True;
+  CriticalSection := TCriticalSection.Create();
   SetConsoleCP(CP_UTF8);
   SetConsoleOutputCP(CP_UTF8);
   EnableVirtualTerminalProcessing();
@@ -10650,12 +11737,16 @@ begin
     MessageBox(0, PChar(LError), 'Critical Initialization Error', MB_ICONERROR);
     Halt(1); // Exit the application with a non-zero exit code to indicate failure
   end;
+
+  SDLVideo := Default(TSDLVideo);
+  SDL_SetTargetFramerate();
 end;
 
 finalization
 begin
   try
     UnloadDLL();
+    CriticalSection.Free();
   except
     on E: Exception do
     begin

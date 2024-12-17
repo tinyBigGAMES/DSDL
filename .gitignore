@@ -83,3 +83,4 @@ modules/
 # PSDL
 *.dsv
 DSDL.zip
+bin/Data.zip
