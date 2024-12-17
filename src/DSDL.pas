@@ -92,7 +92,13 @@
       * Playing in-game cutscenes, intro videos, or animated overlays.
       * Streaming video resources in resource-constrained environments.
 
- 3. Frame-Rate Limiting and Timing Support
+ 3 Spine Animation Support
+   Bring your 2D characters to life! With full Spine runtime integration,
+   you can render and animate Spine .json and .atlas files. Features include
+   dynamic animation states, smooth blending, clipping masks, and support for
+   premultiplied alpha transparency for crystal-clear visuals.
+
+ 4. Frame-Rate Limiting and Timing Support
     Overview:
       * Add precise frame-rate control to your SDL applications with newly
         introduced timing support. This allows developers to cap the frame
@@ -108,7 +114,7 @@
         is critical.
       * Optimizing energy consumption for portable and battery-powered devices.
 
- 4. Simplified SDL Utility Enhancements
+ 5. Simplified SDL Utility Enhancements
     Overview:
      * Additional utility functions have been introduced to streamline common
        SDL development tasks. These enhancements aim to make SDL simpler and
@@ -3398,7 +3404,6 @@ type
   PPSDL_Environment = ^PSDL_Environment;
 
   SDL_CompareCallback = function(const a: Pointer; const b: Pointer): Integer; cdecl;
-
   SDL_CompareCallback_r = function(userdata: Pointer; const a: Pointer; const b: Pointer): Integer; cdecl;
   SDL_iconv_t = Pointer;
   PSDL_iconv_t = ^SDL_iconv_t;
@@ -3446,7 +3451,6 @@ type
   SDL_PropertiesID = Uint32;
 
   SDL_CleanupPropertyCallback = procedure(userdata: Pointer; value: Pointer); cdecl;
-
   SDL_EnumeratePropertiesCallback = procedure(userdata: Pointer; props: SDL_PropertiesID; const name: PUTF8Char); cdecl;
   PSDL_Thread = Pointer;
   PPSDL_Thread = ^PSDL_Thread;
@@ -3455,7 +3459,6 @@ type
   PSDL_TLSID = ^SDL_TLSID;
 
   SDL_ThreadFunction = function(data: Pointer): Integer; cdecl;
-
   SDL_TLSDestructorCallback = procedure(value: Pointer); cdecl;
   PSDL_Mutex = Pointer;
   PPSDL_Mutex = ^PSDL_Mutex;
@@ -3497,7 +3500,6 @@ type
   PPSDL_AudioStream = ^PSDL_AudioStream;
 
   SDL_AudioStreamCallback = procedure(userdata: Pointer; stream: PSDL_AudioStream; additional_amount: Integer; total_amount: Integer); cdecl;
-
   SDL_AudioPostmixCallback = procedure(userdata: Pointer; const spec: PSDL_AudioSpec; buffer: PSingle; buflen: Integer); cdecl;
   SDL_BlendMode = Uint32;
   PSDL_BlendMode = ^SDL_BlendMode;
@@ -3594,7 +3596,6 @@ type
   end;
 
   SDL_ClipboardDataCallback = function(userdata: Pointer; const mime_type: PUTF8Char; size: PNativeUInt): Pointer; cdecl;
-
   SDL_ClipboardCleanupCallback = procedure(userdata: Pointer); cdecl;
   SDL_DisplayID = Uint32;
   PSDL_DisplayID = ^SDL_DisplayID;
@@ -3628,7 +3629,6 @@ type
   PSDL_EGLint = ^SDL_EGLint;
 
   SDL_EGLAttribArrayCallback = function(userdata: Pointer): PSDL_EGLAttrib; cdecl;
-
   SDL_EGLIntArrayCallback = function(userdata: Pointer; display: SDL_EGLDisplay; config: SDL_EGLConfig): PSDL_EGLint; cdecl;
   SDL_GLProfile = Uint32;
   SDL_GLContextFlag = Uint32;
@@ -4700,13 +4700,9 @@ type
   SDL_InitFlags = Uint32;
 
   SDL_AppInit_func = function(appstate: PPointer; argc: Integer; argv: PPUTF8Char): SDL_AppResult; cdecl;
-
   SDL_AppIterate_func = function(appstate: Pointer): SDL_AppResult; cdecl;
-
   SDL_AppEvent_func = function(appstate: Pointer; event: PSDL_Event): SDL_AppResult; cdecl;
-
   SDL_AppQuit_func = procedure(appstate: Pointer; result: SDL_AppResult); cdecl;
-
   SDL_MainThreadCallback = procedure(userdata: Pointer); cdecl;
   PSDL_SharedObject = Pointer;
   PPSDL_SharedObject = ^PSDL_SharedObject;
@@ -4808,7 +4804,6 @@ type
   SDL_TimerID = Uint32;
 
   SDL_TimerCallback = function(userdata: Pointer; timerID: SDL_TimerID; interval: Uint32): Uint32; cdecl;
-
   SDL_NSTimerCallback = function(userdata: Pointer; timerID: SDL_TimerID; interval: Uint64): Uint64; cdecl;
 
   IMG_Animation = record
@@ -4832,15 +4827,10 @@ type
   PPMix_Music = ^PMix_Music;
 
   Mix_MixCallback = procedure(udata: Pointer; stream: PUint8; len: Integer); cdecl;
-
   Mix_MusicFinishedCallback = procedure(); cdecl;
-
   Mix_ChannelFinishedCallback = procedure(channel: Integer); cdecl;
-
   Mix_EffectFunc_t = procedure(chan: Integer; stream: Pointer; len: Integer; udata: Pointer); cdecl;
-
   Mix_EffectDone_t = procedure(chan: Integer; udata: Pointer); cdecl;
-
   Mix_EachSoundFontCallback = function(const p1: PUTF8Char; p2: Pointer): Boolean; cdecl;
   PSDLNet_Address = Pointer;
   PPSDLNet_Address = ^PSDLNet_Address;
@@ -4994,7 +4984,6 @@ type
   end;
 
   plm_audio_decode_callback = procedure(self: Pplm_t; samples: Pplm_samples_t; user: Pointer); cdecl;
-
   plm_buffer_load_callback = procedure(self: Pplm_buffer_t; user: Pointer); cdecl;
 
   spFloatArray = record
@@ -5544,7 +5533,6 @@ type
     color: spColor;
   end;
 
-
   _Entry = record
     slotIndex: Integer;
     name: PUTF8Char;
@@ -5554,7 +5542,6 @@ type
 
   spSkinEntry = _Entry;
   PspSkinEntry = ^spSkinEntry;
-
 
   _SkinHashTableEntry = record
     entry: P_Entry;
@@ -5914,6 +5901,9 @@ type
     sdlVertices: PspSdlVertexArray;
     sdlIndices: PspIntArray;
   end;
+
+  spAtlasPage_createTexture_cb = function(const path: PUTF8Char; userData: Pointer): PSDL_Texture; cdecl;
+  spAtlasPage_disposeTexture_cb = procedure(texture: PSDL_Texture; userData: Pointer); cdecl;
 
 const
   PLM_DEMUX_PACKET_PRIVATE: Integer = $BD;
@@ -7588,7 +7578,6 @@ var
   spBone_worldToLocal: procedure(self: PspBone; worldX: Single; worldY: Single; localX: PSingle; localY: PSingle); cdecl;
   spBone_worldToParent: procedure(self: PspBone; worldX: Single; worldY: Single; parentX: PSingle; parentY: PSingle); cdecl;
   spBone_localToWorld: procedure(self: PspBone; localX: Single; localY: Single; worldX: PSingle; worldY: PSingle); cdecl;
-  spBone_localToParent: procedure(self: PspBone; localX: Single; localY: Single; parentX: PSingle; parentY: PSingle); cdecl;
   spBone_worldToLocalRotation: function(self: PspBone; worldRotation: Single): Single; cdecl;
   spBone_localToWorldRotation: function(self: PspBone; localRotation: Single): Single; cdecl;
   spBone_rotateWorld: procedure(self: PspBone; degrees: Single); cdecl;
@@ -7611,7 +7600,6 @@ var
   spKeyValueArray_add: procedure(self: PspKeyValueArray; value: spKeyValue); cdecl;
   spKeyValueArray_addAll: procedure(self: PspKeyValueArray; other: PspKeyValueArray); cdecl;
   spKeyValueArray_addAllValues: procedure(self: PspKeyValueArray; values: PspKeyValue; offset: Integer; count: Integer); cdecl;
-  spKeyValueArray_removeAt: procedure(self: PspKeyValueArray; index: Integer); cdecl;
   spKeyValueArray_contains: function(self: PspKeyValueArray; value: spKeyValue): Integer; cdecl;
   spKeyValueArray_pop: function(self: PspKeyValueArray): spKeyValue; cdecl;
   spKeyValueArray_peek: function(self: PspKeyValueArray): spKeyValue; cdecl;
@@ -7672,8 +7660,6 @@ var
   spTimeline_getDuration: function(const self: PspTimeline): Single; cdecl;
   spCurveTimeline_setLinear: procedure(self: PspCurveTimeline; frameIndex: Integer); cdecl;
   spCurveTimeline_setStepped: procedure(self: PspCurveTimeline; frameIndex: Integer); cdecl;
-  spCurveTimeline_setCurve: procedure(self: PspCurveTimeline; frameIndex: Integer; cx1: Single; cy1: Single; cx2: Single; cy2: Single); cdecl;
-  spCurveTimeline_getCurvePercent: function(const self: PspCurveTimeline; frameIndex: Integer; percent: Single): Single; cdecl;
   spCurveTimeline1_setFrame: procedure(self: PspCurveTimeline1; frame: Integer; time: Single; value: Single); cdecl;
   spCurveTimeline1_getCurveValue: function(self: PspCurveTimeline1; time: Single): Single; cdecl;
   spCurveTimeline1_getRelativeValue: function(timeline: PspCurveTimeline1; time: Single; alpha: Single; blend: spMixBlend; current: Single; setup: Single): Single; cdecl;
@@ -7971,19 +7957,16 @@ var
   spSdlVertexArray_addAll: procedure(self: PspSdlVertexArray; other: PspSdlVertexArray); cdecl;
   spSdlVertexArray_addAllValues: procedure(self: PspSdlVertexArray; values: PSDL_Vertex; offset: Integer; count: Integer); cdecl;
   spSdlVertexArray_removeAt: procedure(self: PspSdlVertexArray; index: Integer); cdecl;
-  spSdlVertexArray_contains: function(self: PspSdlVertexArray; value: SDL_Vertex): Integer; cdecl;
   spSdlVertexArray_pop: function(self: PspSdlVertexArray): SDL_Vertex; cdecl;
   spSdlVertexArray_peek: function(self: PspSdlVertexArray): SDL_Vertex; cdecl;
+  spAtlasPage_setCallbacks: procedure(createCallback: spAtlasPage_createTexture_cb; disposeCallback: spAtlasPage_disposeTexture_cb; userData: Pointer); cdecl;
   spSkeletonDrawable_create: function(skeletonData: PspSkeletonData; animationStateData: PspAnimationStateData): PspSkeletonDrawable; cdecl;
   spSkeletonDrawable_dispose: procedure(self: PspSkeletonDrawable); cdecl;
   spSkeletonDrawable_update: procedure(self: PspSkeletonDrawable; delta: Single; physics: spPhysics); cdecl;
   spSkeletonDrawable_draw: procedure(self: PspSkeletonDrawable; renderer: PSDL_Renderer); cdecl;
-  _spAtlasPage_createTexture: procedure(self: PspAtlasPage; const path: PUTF8Char); cdecl;
-  _spAtlasPage_disposeTexture: procedure(self: PspAtlasPage); cdecl;
-  _spUtil_readFile: function(const path: PUTF8Char; length: PInteger): PUTF8Char; cdecl;
-{$ENDREGION}  
+{$ENDREGION}
 
-{$REGION ' EXT API '}
+{$REGION ' EXTENDED API '}
 //=== ZLIB ==================================================================
 function unzSeek(AFile: unzFile; AOffset: Int64; AOrigin: Integer; const APassword, AFilename: AnsiString): Int64;
 
@@ -8687,7 +8670,7 @@ end;
 
 {$ENDREGION}
 
-{$REGION ' EXT API '}
+{$REGION ' EXTENDED API '}
 //=== ZLIB ==================================================================
 function unzSeek(AFile: unzFile; AOffset: Int64; AOrigin: Integer; const APassword, AFilename: AnsiString): Int64;
 var
@@ -9566,10 +9549,7 @@ end;
 procedure GetExports(const aDLLHandle: THandle);
 begin
   if aDllHandle = 0 then Exit;
-  _spAtlasPage_createTexture := GetProcAddress(aDLLHandle, '_spAtlasPage_createTexture');
-  _spAtlasPage_disposeTexture := GetProcAddress(aDLLHandle, '_spAtlasPage_disposeTexture');
   _spClippingAttachment_dispose := GetProcAddress(aDLLHandle, '_spClippingAttachment_dispose');
-  _spUtil_readFile := GetProcAddress(aDLLHandle, '_spUtil_readFile');
   crc32 := GetProcAddress(aDLLHandle, 'crc32');
   IMG_FreeAnimation := GetProcAddress(aDLLHandle, 'IMG_FreeAnimation');
   IMG_isAVIF := GetProcAddress(aDLLHandle, 'IMG_isAVIF');
@@ -11074,6 +11054,7 @@ begin
   spAtlasAttachmentLoader_create := GetProcAddress(aDLLHandle, 'spAtlasAttachmentLoader_create');
   spAtlasPage_create := GetProcAddress(aDLLHandle, 'spAtlasPage_create');
   spAtlasPage_dispose := GetProcAddress(aDLLHandle, 'spAtlasPage_dispose');
+  spAtlasPage_setCallbacks := GetProcAddress(aDLLHandle, 'spAtlasPage_setCallbacks');
   spAtlasRegion_create := GetProcAddress(aDLLHandle, 'spAtlasRegion_create');
   spAtlasRegion_dispose := GetProcAddress(aDLLHandle, 'spAtlasRegion_dispose');
   spAttachment_copy := GetProcAddress(aDLLHandle, 'spAttachment_copy');
@@ -11091,7 +11072,6 @@ begin
   spBone_getWorldScaleX := GetProcAddress(aDLLHandle, 'spBone_getWorldScaleX');
   spBone_getWorldScaleY := GetProcAddress(aDLLHandle, 'spBone_getWorldScaleY');
   spBone_isYDown := GetProcAddress(aDLLHandle, 'spBone_isYDown');
-  spBone_localToParent := GetProcAddress(aDLLHandle, 'spBone_localToParent');
   spBone_localToWorld := GetProcAddress(aDLLHandle, 'spBone_localToWorld');
   spBone_localToWorldRotation := GetProcAddress(aDLLHandle, 'spBone_localToWorldRotation');
   spBone_rotateWorld := GetProcAddress(aDLLHandle, 'spBone_rotateWorld');
@@ -11130,8 +11110,6 @@ begin
   spColor_setFromColor3 := GetProcAddress(aDLLHandle, 'spColor_setFromColor3');
   spColor_setFromFloats := GetProcAddress(aDLLHandle, 'spColor_setFromFloats');
   spColor_setFromFloats3 := GetProcAddress(aDLLHandle, 'spColor_setFromFloats3');
-  spCurveTimeline_getCurvePercent := GetProcAddress(aDLLHandle, 'spCurveTimeline_getCurvePercent');
-  spCurveTimeline_setCurve := GetProcAddress(aDLLHandle, 'spCurveTimeline_setCurve');
   spCurveTimeline_setLinear := GetProcAddress(aDLLHandle, 'spCurveTimeline_setLinear');
   spCurveTimeline_setStepped := GetProcAddress(aDLLHandle, 'spCurveTimeline_setStepped');
   spCurveTimeline1_getAbsoluteValue := GetProcAddress(aDLLHandle, 'spCurveTimeline1_getAbsoluteValue');
@@ -11209,7 +11187,6 @@ begin
   spKeyValueArray_ensureCapacity := GetProcAddress(aDLLHandle, 'spKeyValueArray_ensureCapacity');
   spKeyValueArray_peek := GetProcAddress(aDLLHandle, 'spKeyValueArray_peek');
   spKeyValueArray_pop := GetProcAddress(aDLLHandle, 'spKeyValueArray_pop');
-  spKeyValueArray_removeAt := GetProcAddress(aDLLHandle, 'spKeyValueArray_removeAt');
   spKeyValueArray_setSize := GetProcAddress(aDLLHandle, 'spKeyValueArray_setSize');
   spMeshAttachment_create := GetProcAddress(aDLLHandle, 'spMeshAttachment_create');
   spMeshAttachment_newLinkedMesh := GetProcAddress(aDLLHandle, 'spMeshAttachment_newLinkedMesh');
@@ -11308,7 +11285,6 @@ begin
   spSdlVertexArray_addAll := GetProcAddress(aDLLHandle, 'spSdlVertexArray_addAll');
   spSdlVertexArray_addAllValues := GetProcAddress(aDLLHandle, 'spSdlVertexArray_addAllValues');
   spSdlVertexArray_clear := GetProcAddress(aDLLHandle, 'spSdlVertexArray_clear');
-  spSdlVertexArray_contains := GetProcAddress(aDLLHandle, 'spSdlVertexArray_contains');
   spSdlVertexArray_create := GetProcAddress(aDLLHandle, 'spSdlVertexArray_create');
   spSdlVertexArray_dispose := GetProcAddress(aDLLHandle, 'spSdlVertexArray_dispose');
   spSdlVertexArray_ensureCapacity := GetProcAddress(aDLLHandle, 'spSdlVertexArray_ensureCapacity');

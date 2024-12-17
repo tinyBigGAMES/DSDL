@@ -24,6 +24,9 @@ uses
   System.Math,
   DSDL;
 
+const
+  CZipFilename = 'Data.zip';
+
 procedure Pause();
 begin
   WriteLn;
@@ -42,9 +45,9 @@ end;
 procedure Test01();
 begin
   // Call SDL_BuildZipFile to create a ZIP archive.
-  // 'Data.zip' specifies the name of the output ZIP file.
+  // 'CZipFilename' specifies the name of the output ZIP file.
   // 'res' specifies the input folder to compress into the ZIP file.
-  SDL_BuildZipFile('Data.zip', 'res');
+  SDL_BuildZipFile(CZipFilename, 'res');
 end;
 
 /// <summary>
@@ -77,7 +80,7 @@ begin
   end;
 
   // Create an SDL window with the specified title and size.
-  LWindow := SDL_CreateWindow('DSDL: Test #01', 800, 600, 0);
+  LWindow := SDL_CreateWindow('DSDL: Load spine animation from file', 800, 600, 0);
   if LWindow = nil then
   begin
     Writeln('Error: ', SDL_GetError); // Print window creation error.
@@ -213,7 +216,7 @@ begin
     writeln('SDL version: ', LVersion);
 
     // Create a resizable SDL window with the specified logical resolution.
-    LWindow := SDL_CreateWindow('DSDL: Test #03', RES_WIDTH, RES_HEIGHT, SDL_WINDOW_RESIZABLE);
+    LWindow := SDL_CreateWindow('DSDL: Render fonts, video and image', RES_WIDTH, RES_HEIGHT, SDL_WINDOW_RESIZABLE);
 
     // Create an OpenGL-based SDL renderer for the window.
     LRenderer := SDL_CreateRenderer(LWindow, 'opengl');
@@ -226,7 +229,7 @@ begin
     LDpi := Round(LScale * 96.0);
 
     // Load the font from a ZIP archive and configure it for DPI-aware rendering.
-    LFont := TTF_OpenFontIO(SDL_IOFromZipFile('Data.zip', 'res/font/default.ttf'), True, 16);
+    LFont := TTF_OpenFontIO(SDL_IOFromZipFile(CZipFilename, 'res/font/default.ttf'), True, 16);
     TTF_SetFontHinting(LFont, TTF_HINTING_LIGHT_SUBPIXEL);
     TTF_SetFontSizeDPI(LFont, 16, LDpi, LDpi);
 
@@ -238,10 +241,10 @@ begin
     TTF_SetTextColor(LText, 255, 255, 255, 255); // Set text color to white.
 
     // Load an image texture from the ZIP archive.
-    LTexture := IMG_LoadTexture_IO(LRenderer, SDL_IOFromZipFile('Data.zip', 'res/images/cute_kitten.jpg'), True);
+    LTexture := IMG_LoadTexture_IO(LRenderer, SDL_IOFromZipFile(CZipFilename, 'res/images/cute_kitten.jpg'), True);
 
     // Load and play a video file from the ZIP archive.
-    SDL_LoadPlayVideoFromZipFile(LRenderer, 'Data.zip', 'res/videos/sample01.mpg', 0.1, -1);
+    SDL_LoadPlayVideoFromZipFile(LRenderer, CZipFilename, 'res/videos/sample01.mpg', 0.1, -1);
 
     // Reset SDL's timing system to synchronize updates.
     SDL_ResetTiming();
@@ -363,6 +366,192 @@ begin
   end;
 end;
 
+
+/// <summary>
+/// Callback function to create an SDL texture from a file within a ZIP archive.
+/// </summary>
+/// <param name="APath">The relative path of the file inside the ZIP archive.</param>
+/// <param name="AUserData">Pointer to the SDL renderer used for creating the texture.</param>
+/// <returns>Returns a pointer to the created SDL texture, or nil if creation fails.</returns>
+/// <remarks>
+/// This function utilizes `IMG_LoadTexture_IO` to load a texture from a ZIP file.
+/// The ZIP file path is defined by `CZipFilename`.
+/// </remarks>
+function MyCreateTextureCallback(const APath: PAnsiChar; AUserData: Pointer): PSDL_Texture; cdecl;
+var
+  LRenderer: PSDL_Renderer; // Renderer passed as user data.
+  LFilename: string;        // Path to the file inside the ZIP archive.
+begin
+  Result := nil;
+
+  // Exit if AUserData (renderer) is not provided.
+  if not Assigned(AUserData) then Exit;
+
+  // Exit if APath (file path) is not provided.
+  if not Assigned(APath) then Exit;
+
+  // Cast AUserData to the renderer.
+  LRenderer := PSDL_Renderer(AUserData);
+
+  // Convert the provided path to a Delphi string.
+  LFilename := string(APath);
+
+  // Attempt to load the texture from the ZIP file using the renderer.
+  Result := IMG_LoadTexture_IO(LRenderer, SDL_IOFromZipFile(CZipFilename, LFilename), True);
+end;
+
+/// <summary>
+/// Callback function to dispose of an SDL texture.
+/// </summary>
+/// <param name="ATexture">Pointer to the SDL texture to be destroyed.</param>
+/// <param name="AUserData">Optional user data (unused in this function).</param>
+/// <remarks>
+/// This function calls `SDL_DestroyTexture` to release the texture memory.
+/// </remarks>
+procedure MyDisposeTextureCallback(ATexture: PSDL_Texture; AUserData: Pointer); cdecl;
+begin
+  // Exit if the texture pointer is not valid.
+  if not Assigned(ATexture) then Exit;
+
+  // Destroy the texture to free its resources.
+  SDL_DestroyTexture(ATexture);
+end;
+
+
+/// <summary>
+/// Demonstrates rendering a Spine animation using SDL and the Spine runtime integration.
+/// The spine animation is loaded from a zipfile.
+/// </summary>
+/// <remarks>
+/// This procedure initializes an SDL window and renderer, loads Spine animation assets,
+/// and plays the 'portal' and 'run' animations in a loop until the user closes the window.
+/// It handles SDL event polling, frame timing, and resource cleanup.
+/// </remarks>
+procedure Test04();
+var
+  LWindow: PSDL_Window;                  // Pointer to the SDL window.
+  LRenderer: PSDL_Renderer;              // Pointer to the SDL renderer.
+  LAtlas: PspAtlas;                      // Atlas for Spine animation textures.
+  LSkeletonJson: PspSkeletonJson;        // JSON parser for Spine skeleton data.
+  LSkeletonData: PspSkeletonData;        // Spine skeleton data.
+  LAnimationStateData: PspAnimationStateData; // State data for animation transitions.
+  LDrawable: PspSkeletonDrawable;        // Drawable object for the Spine skeleton.
+  LEvent: SDL_Event;                     // Event structure for SDL event handling.
+  LQuit: Boolean;                        // Flag to control the main loop.
+  LLastFrameTime, LNow: UInt64;          // Variables for frame timing.
+  LDeltaTime: Double;                    // Time elapsed between frames.
+  LData: Pointer;
+  LDataSize: NativeUInt;
+begin
+  // Initialize SDL video subsystem.
+  if not SDL_Init(SDL_INIT_VIDEO) then
+  begin
+    Writeln('Error: ', SDL_GetError); // Print SDL initialization error.
+    Exit; // Exit if initialization fails.
+  end;
+
+  // Create an SDL window with the specified title and size.
+  LWindow := SDL_CreateWindow('DSDL: Load spine animation from zipfile', 800, 600, 0);
+  if LWindow = nil then
+  begin
+    Writeln('Error: ', SDL_GetError); // Print window creation error.
+    SDL_Quit; // Clean up SDL resources.
+    Exit;
+  end;
+
+  // Create an SDL renderer for the window with OpenGL backend.
+  LRenderer := SDL_CreateRenderer(LWindow, 'opengl');
+  if LRenderer = nil then
+  begin
+    Writeln('Error: ', SDL_GetError); // Print renderer creation error.
+    SDL_DestroyWindow(LWindow);       // Destroy the created window.
+    SDL_Quit;                         // Clean up SDL resources.
+    Exit;
+  end;
+
+  // Load the Spine animation atlas from inside zipfile.
+  spAtlasPage_setCallbacks(MyCreateTextureCallback, MyDisposeTextureCallback, LRenderer);
+  LData := SDL_LoadFile_IO(SDL_IOFromZipFile(CZipFilename, 'res/spine/spineboy/spineboy-pma.atlas'), @LDataSize, True);
+  LAtlas := spAtlas_Create(LData, LDataSize, 'res/spine/spineboy/', LRenderer);
+  SDL_Free(LData);
+
+  // Create a skeleton JSON parser and scale the skeleton.
+  LSkeletonJson := spSkeletonJson_create(LAtlas);
+  LSkeletonJson.scale := 0.5;
+
+  // Read skeleton data from the JSON file from insize zipfile.
+  LData := SDL_LoadFile_IO(SDL_IOFromZipFile(CZipFilename, 'res/spine/spineboy/spineboy-pro.json'), @LDataSize, True);
+  LSkeletonData := spSkeletonJson_readSkeletonData(LSkeletonJson, LData);
+  SDL_Free(LData);
+
+  // Create animation state data and set default transition mix.
+  LAnimationStateData := spAnimationStateData_create(LSkeletonData);
+  LAnimationStateData.defaultMix := 0.2;
+
+  // Create a drawable skeleton object and set its initial position.
+  LDrawable := spSkeletonDrawable_create(LSkeletonData, LAnimationStateData);
+  LDrawable.usePremultipliedAlpha := -1; // Enable premultiplied alpha.
+  LDrawable.skeleton^.x := 400;         // Set X position.
+  LDrawable.skeleton^.y := 500;         // Set Y position.
+
+  // Set the skeleton to its setup pose.
+  spSkeleton_setToSetupPose(LDrawable.skeleton);
+
+  // Perform an initial skeleton update.
+  spSkeletonDrawable_update(LDrawable, 0, SP_PHYSICS_UPDATE);
+
+  // Set initial animation state: 'portal' followed by 'run' (looped).
+  spAnimationState_setAnimationByName(LDrawable.animationState, 0, 'portal', 0);
+  spAnimationState_addAnimationByName(LDrawable.animationState, 0, 'run', -1, 0);
+
+  // Initialize the quit flag and timing variables.
+  LQuit := False;
+  LLastFrameTime := SDL_GetPerformanceCounter;
+
+  // Main event loop.
+  while not LQuit do
+  begin
+    // Poll SDL events.
+    while SDL_PollEvent(@LEvent) do
+    begin
+      // Exit the loop if a quit event is detected.
+      if LEvent.&type = SDL_EVENT_QUIT then
+      begin
+        LQuit := True;
+        Break;
+      end;
+    end;
+
+    // Clear the screen with a specified color.
+    SDL_SetRenderDrawColor(LRenderer, 94, 93, 96, 255);
+    SDL_RenderClear(LRenderer);
+
+    // Calculate delta time (time between frames) for smooth animation.
+    LNow := SDL_GetPerformanceCounter;
+    LDeltaTime := (LNow - LLastFrameTime) / SDL_GetPerformanceFrequency;
+    LLastFrameTime := LNow;
+
+    // Update the skeleton animation based on delta time.
+    spSkeletonDrawable_update(LDrawable, LDeltaTime, SP_PHYSICS_UPDATE);
+
+    // Draw the updated skeleton on the renderer.
+    spSkeletonDrawable_draw(LDrawable, LRenderer);
+
+    // Present the rendered frame to the window.
+    SDL_RenderPresent(LRenderer);
+  end;
+
+  // Cleanup: Dispose of Spine and SDL resources.
+  spSkeletonDrawable_dispose(LDrawable);
+  spAnimationStateData_dispose(LAnimationStateData);
+  spSkeletonJson_dispose(LSkeletonJson);
+  spAtlas_dispose(LAtlas);
+
+  SDL_DestroyRenderer(LRenderer); // Destroy the renderer.
+  SDL_DestroyWindow(LWindow);     // Destroy the window.
+  SDL_Quit;                       // Quit SDL subsystem.
+end;
+
 /// <summary>
 /// Executes one of the predefined test procedures (Test01, Test02, or Test03) based on a selected value.
 /// </summary>
@@ -374,12 +563,13 @@ procedure RunTests();
 var
   LNum: Integer; // Variable to hold the selected test number.
 begin
-  LNum := 03; // Set the test number to 3. This selects Test03.
+  LNum := 01; // Set the test number, make sure to run #01 first to create zipfile needed by other examples
 
   case LNum of
-    01: Test01(); // Run Test01 if LNum is 1.
-    02: Test02(); // Run Test02 if LNum is 2.
-    03: Test03(); // Run Test03 if LNum is 3.
+    01: Test01(); // Build zipfile used by the examples
+    02: Test02(); // Load spine animation from file
+    03: Test03(); // Render font, video and image
+    04: Test04(); // Load spine animation from zipfile
   end;
 
   Pause(); // Pause execution to allow viewing of results before the program exits.
