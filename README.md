@@ -312,10 +312,16 @@ Special thanks to the maintainers of:
 ### Podcast Deep Dive
 Explore the in-depth discussion about DSDL, its features, and its use cases.
 
-
 https://github.com/user-attachments/assets/8d735ed7-a765-4da2-8a81-be8cc1b5a3fc
 
+### Extensions
+Load spine animation from zipfile
 
+https://github.com/user-attachments/assets/3f3d4aae-7db4-46b5-9f1b-56247077d94b
+
+Video Playback from zipfile
+
+https://github.com/user-attachments/assets/90805b12-2cc7-47be-9a26-f70e26da0b0b
 
 
 ## Contributing
