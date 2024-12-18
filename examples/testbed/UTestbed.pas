@@ -479,7 +479,7 @@ begin
   LSkeletonJson := spSkeletonJson_create(LAtlas);
   LSkeletonJson.scale := 0.5;
 
-  // Read skeleton data from the JSON file from insize zipfile.
+  // Read skeleton data from the JSON file from inside zipfile.
   LData := SDL_LoadFile_IO(SDL_IOFromZipFile(CZipFilename, 'res/spine/spineboy/spineboy-pro.json'), @LDataSize, True);
   LSkeletonData := spSkeletonJson_readSkeletonData(LSkeletonJson, LData);
   SDL_Free(LData);

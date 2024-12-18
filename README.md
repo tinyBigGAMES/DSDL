@@ -307,6 +307,13 @@ Special thanks to the maintainers of:
 - **SDL** team for providing an amazing multimedia library
 - **Open-source contributors** for pl_mpeg, zlib, and SDL extensions.
 
+## Media
+
+### Podcast Deep Dive
+Explore the in-depth discussion about DSDL, its features, and its use cases.
+
+
+
 ## Contributing
 
 Contributions to **DSDL** are highly encouraged. Please feel free to submit issues, suggest new features, or create pull requests to expand the capabilities and robustness of the scripting engine.
