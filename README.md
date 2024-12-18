@@ -313,6 +313,10 @@ Special thanks to the maintainers of:
 Explore the in-depth discussion about DSDL, its features, and its use cases.
 
 
+https://github.com/user-attachments/assets/8d735ed7-a765-4da2-8a81-be8cc1b5a3fc
+
+
+
 
 ## Contributing
 
